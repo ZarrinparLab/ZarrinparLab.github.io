@@ -16,10 +16,55 @@
       color: red;
     }
   </style>
-  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm//vega@5"></script>
-  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm//vega-lite@4.8.1"></script>
-  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm//vega-embed@6"></script>
-  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega@5.20.2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-lite@5.1.0"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-embed@6.17.0"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+  <script>
+    var gene_list = {};
+    $(document).ready(function () {
+      $.getJSON('expression.gene_html.json', function (data) {
+        var gene_dl = [];
+        $.each(data, function (key, val) {
+          gene_list[key] = val
+          gene_dl.push("<option value='" + key + "'>");
+        });
+
+        $("#gene_name").replaceWith($("<input />",
+          {
+            "list": "gene_names",
+            "name": "gene",
+            "id": "gene_name",
+            "class": "gene_name_list"
+          }).append(
+            $("<datalist/>",
+              {
+                "id": "gene_names",
+                html: gene_dl.join("")
+              })
+          )
+        );
+        params = new URLSearchParams(window.location.search)
+        if (params.has('gene')) {
+          gene_id = params.get('gene');
+          if (gene_id in gene_list) {
+            $('#gene_id').html(gene_id);
+            $('#gene_name').attr('value', gene_id);
+            var gene_file = gene_list[gene_id]
+            $('#chart').attr('src', gene_file);
+
+          }
+          else {
+            $("#gene_id").replaceWith($("h2", {
+              "class": "error",
+              html: "Invalid Gene ID "
+            }));
+          }
+        }
+      });
+
+    })
+  </script>
 </head>
 
 <body>
@@ -32,46 +77,10 @@
       <input type='text' id='gene_name' name='gene' value='Fxr1'>
       <input type='submit' name='Load'>
     </form>
-    <h2 id="gene_id">...Loading...</h2>
-    <iframe id="chart" src="" , height="400" , width="1000" frameborder=0></iframe>
-    <div id="vis"></div>
+    <h2 id="gene_id">Welcome to the mouse TI circadian expression viewer</h2>
+    <iframe id="chart" src="info.html" height="400" width="1000" frameborder="0"></iframe>
     <p><a href='tpm_by_gene.csv'>Download Expression Data</a></p>
     <p><a href='metadata-ti.csv'>Download Sample Metadata</a></p>
-    <script>
-      $(document).ready(function () {
-        params = new URLSearchParams(window.location.search)
-        if (params.has('gene')) {
-          gene_id = params.get('gene');
-        }
-        else {
-          gene_id = 'Fxr1';
-        }
-        $('#gene_id').html(gene_id);
-        $('#gene_name').attr('value', gene_id);
-        lg = gene_id.toLowerCase()
-        screen_path = "./" + lg.substring(0, 2) + '/' + lg + '.html';
-        $('#chart').attr('src', screen_path);
-      })
-    </script>
-    <!-- <script>
-      (function (vegaEmbed) {
-        var spec = { "config": { "view": { "continuousWidth": 400, "continuousHeight": 300 } }, "hconcat": [{ "layer": [{ "mark": "line", "encoding": { "color": { "type": "nominal", "field": "Acronym", "scale": { "range": ["blue", "red", "green", "yellow"] }, "sort": ["NA", "FA", "FT", "CDKO"], "title": "Condition" }, "opacity": { "condition": { "value": 1, "selection": "selector001" }, "value": 0.2 }, "x": { "type": "nominal", "field": "ZT", "scale": { "domain": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24] }, "title": "ZT Timepoint" }, "y": { "type": "quantitative", "aggregate": "mean", "field": "TPM", "title": "CLR Normalized Abundance" } }, "selection": { "selector001": { "type": "multi", "fields": ["Acronym"], "bind": "legend" } } }, { "mark": { "type": "errorband", "extent": "ci" }, "encoding": { "color": { "type": "nominal", "field": "Acronym", "scale": { "range": ["blue", "red", "green", "yellow"] }, "sort": ["NA", "FA", "FT", "CDKO"], "title": "Condition" }, "opacity": { "condition": { "value": 0.5, "selection": "selector001" }, "value": 0.1 }, "x": { "type": "nominal", "field": "ZT", "scale": { "domain": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24] }, "title": "ZT Timepoint" }, "y": { "type": "quantitative", "field": "TPM", "title": "CLR Normalized Abundance" } }, "selection": { "selector001": { "type": "multi", "fields": ["Acronym"], "bind": "legend" } } }] }, { "mark": "boxplot", "encoding": { "color": { "type": "nominal", "field": "Acronym", "scale": { "range": ["blue", "red", "green", "yellow"] }, "sort": ["NA", "FA", "FT", "CDKO"], "title": "Condition" }, "column": { "type": "nominal", "field": "Acronym", "sort": ["NA", "FA", "FT", "CDKO"], "title": null }, "opacity": { "condition": { "value": 1, "selection": "selector001" }, "value": 0.2 }, "x": { "type": "nominal", "field": "day_night", "sort": ["day", "night"], "title": null }, "y": { "type": "quantitative", "field": "TPM", "title": "CLR Normalized Abundance" } }, "selection": { "selector001": { "type": "multi", "fields": ["Acronym"], "bind": "legend" } }, "transform": [{ "calculate": "floor(datum.ZT / 12)?\"night\":\"day\"", "as": "day_night" }] }], "data": { "name": "data-d037ac02a4bed7a3140c80a324d8429c" }, "$schema": "https://vega.github.io/schema/vega-lite/v4.8.1.json", "datasets": { "data-d037ac02a4bed7a3140c80a324d8429c": [{ "condition": "iCDKO", "time": 13, "replicate": "a", "Acronym": "CDKO", "Feeding": "Ad libitum", "Diet": "NCD", "ZT": 13, "tissue": "ileum", "TPM": 10.6234406 }, { "condition": "iCDKO", "time": 17, "replicate": "a", "Acronym": "CDKO", "Feeding": "Ad libitum", "Diet": "NCD", "ZT": 17, "tissue": "ileum", "TPM": 14.896514000000002 }, { "condition": "iCDKO", "time": 1, "replicate": "a", "Acronym": "CDKO", "Feeding": "Ad libitum", "Diet": "NCD", "ZT": 1, "tissue": "ileum", "TPM": 9.156471 }, { "condition": "iCDKO", "time": 21, "replicate": "a", "Acronym": "CDKO", "Feeding": "Ad libitum", "Diet": "NCD", "ZT": 21, "tissue": "ileum", "TPM": 15.378567000000002 }, { "condition": "iCDKO", "time": 5, "replicate": "a", "Acronym": "CDKO", "Feeding": "Ad libitum", "Diet": "NCD", "ZT": 5, "tissue": "ileum", "TPM": 11.7204 }, { "condition": "iCDKO", "time": 9, "replicate": "a", "Acronym": "CDKO", "Feeding": "Ad libitum", "Diet": "NCD", "ZT": 9, "tissue": "ileum", "TPM": 13.8657 }, { "condition": "iFA", "time": 1, "replicate": "a", "Acronym": "FA", "Feeding": "Ad libitum", "Diet": "HFD", "ZT": 13, "tissue": "ileum", "TPM": 2.73175 }, { "condition": "iFA", "time": 1, "replicate": "b", "Acronym": "FA", "Feeding": "Ad libitum", "Diet": "HFD", "ZT": 13, "tissue": "ileum", "TPM": 4.62271 }, { "condition": "iFA", "time": 1, "replicate": "c", "Acronym": "FA", "Feeding": "Ad libitum", "Diet": "HFD", "ZT": 13, "tissue": "ileum", "TPM": 4.70793 }, { "condition": "iFA", "time": 2, "replicate": "a", "Acronym": "FA", "Feeding": "Ad libitum", "Diet": "HFD", "ZT": 17, "tissue": "ileum", "TPM": 4.3604 }, { "condition": "iFA", "time": 2, "replicate": "b", "Acronym": "FA", "Feeding": "Ad libitum", "Diet": "HFD", "ZT": 17, "tissue": "ileum", "TPM": 4.385975 }, { "condition": "iFA", "time": 2, "replicate": "c", "Acronym": "FA", "Feeding": "Ad libitum", "Diet": "HFD", "ZT": 17, "tissue": "ileum", "TPM": 7.07211 }, { "condition": "iFA", "time": 3, "replicate": "a", "Acronym": "FA", "Feeding": "Ad libitum", "Diet": "HFD", "ZT": 21, "tissue": "ileum", "TPM": 4.84085 }, { "condition": "iFA", "time": 3, "replicate": "b", "Acronym": "FA", "Feeding": "Ad libitum", "Diet": "HFD", "ZT": 21, "tissue": "ileum", "TPM": 7.20062 }, { "condition": "iFA", "time": 3, "replicate": "c", "Acronym": "FA", "Feeding": "Ad libitum", "Diet": "HFD", "ZT": 21, "tissue": "ileum", "TPM": 5.92211 }, { "condition": "iFA", "time": 4, "replicate": "a", "Acronym": "FA", "Feeding": "Ad libitum", "Diet": "HFD", "ZT": 1, "tissue": "ileum", "TPM": 8.40977 }, { "condition": "iFA", "time": 4, "replicate": "b", "Acronym": "FA", "Feeding": "Ad libitum", "Diet": "HFD", "ZT": 1, "tissue": "ileum", "TPM": 6.856811 }, { "condition": "iFA", "time": 4, "replicate": "c", "Acronym": "FA", "Feeding": "Ad libitum", "Diet": "HFD", "ZT": 1, "tissue": "ileum", "TPM": 6.184389 }, { "condition": "iFA", "time": 5, "replicate": "a", "Acronym": "FA", "Feeding": "Ad libitum", "Diet": "HFD", "ZT": 5, "tissue": "ileum", "TPM": 7.59094 }, { "condition": "iFA", "time": 5, "replicate": "b", "Acronym": "FA", "Feeding": "Ad libitum", "Diet": "HFD", "ZT": 5, "tissue": "ileum", "TPM": 9.323084 }, { "condition": "iFA", "time": 5, "replicate": "c", "Acronym": "FA", "Feeding": "Ad libitum", "Diet": "HFD", "ZT": 5, "tissue": "ileum", "TPM": 7.5274199999999984 }, { "condition": "iFA", "time": 6, "replicate": "a", "Acronym": "FA", "Feeding": "Ad libitum", "Diet": "HFD", "ZT": 9, "tissue": "ileum", "TPM": 11.0858458 }, { "condition": "iFA", "time": 6, "replicate": "b", "Acronym": "FA", "Feeding": "Ad libitum", "Diet": "HFD", "ZT": 9, "tissue": "ileum", "TPM": 4.826919999999999 }, { "condition": "iFA", "time": 6, "replicate": "c", "Acronym": "FA", "Feeding": "Ad libitum", "Diet": "HFD", "ZT": 9, "tissue": "ileum", "TPM": 6.831091699999999 }, { "condition": "iFT", "time": 1, "replicate": "a", "Acronym": "FT", "Feeding": "Time restricted", "Diet": "HFD", "ZT": 13, "tissue": "ileum", "TPM": 9.29459 }, { "condition": "iFT", "time": 1, "replicate": "b", "Acronym": "FT", "Feeding": "Time restricted", "Diet": "HFD", "ZT": 13, "tissue": "ileum", "TPM": 8.4987878 }, { "condition": "iFT", "time": 1, "replicate": "c", "Acronym": "FT", "Feeding": "Time restricted", "Diet": "HFD", "ZT": 13, "tissue": "ileum", "TPM": 9.49433 }, { "condition": "iFT", "time": 2, "replicate": "a", "Acronym": "FT", "Feeding": "Time restricted", "Diet": "HFD", "ZT": 17, "tissue": "ileum", "TPM": 8.7682297 }, { "condition": "iFT", "time": 2, "replicate": "b", "Acronym": "FT", "Feeding": "Time restricted", "Diet": "HFD", "ZT": 17, "tissue": "ileum", "TPM": 10.4287 }, { "condition": "iFT", "time": 2, "replicate": "c", "Acronym": "FT", "Feeding": "Time restricted", "Diet": "HFD", "ZT": 17, "tissue": "ileum", "TPM": 10.284342999999998 }, { "condition": "iFT", "time": 3, "replicate": "a", "Acronym": "FT", "Feeding": "Time restricted", "Diet": "HFD", "ZT": 21, "tissue": "ileum", "TPM": 10.824047 }, { "condition": "iFT", "time": 3, "replicate": "b", "Acronym": "FT", "Feeding": "Time restricted", "Diet": "HFD", "ZT": 21, "tissue": "ileum", "TPM": 11.5778436 }, { "condition": "iFT", "time": 3, "replicate": "c", "Acronym": "FT", "Feeding": "Time restricted", "Diet": "HFD", "ZT": 21, "tissue": "ileum", "TPM": 11.2609 }, { "condition": "iFT", "time": 4, "replicate": "a", "Acronym": "FT", "Feeding": "Time restricted", "Diet": "HFD", "ZT": 1, "tissue": "ileum", "TPM": 10.584096 }, { "condition": "iFT", "time": 4, "replicate": "b", "Acronym": "FT", "Feeding": "Time restricted", "Diet": "HFD", "ZT": 1, "tissue": "ileum", "TPM": 10.060063 }, { "condition": "iFT", "time": 4, "replicate": "c", "Acronym": "FT", "Feeding": "Time restricted", "Diet": "HFD", "ZT": 1, "tissue": "ileum", "TPM": 10.3623 }, { "condition": "iFT", "time": 5, "replicate": "a", "Acronym": "FT", "Feeding": "Time restricted", "Diet": "HFD", "ZT": 5, "tissue": "ileum", "TPM": 9.954478000000002 }, { "condition": "iFT", "time": 5, "replicate": "b", "Acronym": "FT", "Feeding": "Time restricted", "Diet": "HFD", "ZT": 5, "tissue": "ileum", "TPM": 11.4679469 }, { "condition": "iFT", "time": 5, "replicate": "c", "Acronym": "FT", "Feeding": "Time restricted", "Diet": "HFD", "ZT": 5, "tissue": "ileum", "TPM": 8.791382 }, { "condition": "iFT", "time": 6, "replicate": "a", "Acronym": "FT", "Feeding": "Time restricted", "Diet": "HFD", "ZT": 9, "tissue": "ileum", "TPM": 8.007702900000002 }, { "condition": "iFT", "time": 6, "replicate": "b", "Acronym": "FT", "Feeding": "Time restricted", "Diet": "HFD", "ZT": 9, "tissue": "ileum", "TPM": 7.98729 }, { "condition": "iFT", "time": 6, "replicate": "c", "Acronym": "FT", "Feeding": "Time restricted", "Diet": "HFD", "ZT": 9, "tissue": "ileum", "TPM": 8.420106599999999 }, { "condition": "iNA", "time": 1, "replicate": "a", "Acronym": "NA", "Feeding": "Ad libitum", "Diet": "NCD", "ZT": 13, "tissue": "ileum", "TPM": 4.3535 }, { "condition": "iNA", "time": 1, "replicate": "b", "Acronym": "NA", "Feeding": "Ad libitum", "Diet": "NCD", "ZT": 13, "tissue": "ileum", "TPM": 6.279561000000001 }, { "condition": "iNA", "time": 1, "replicate": "c", "Acronym": "NA", "Feeding": "Ad libitum", "Diet": "NCD", "ZT": 13, "tissue": "ileum", "TPM": 6.26527 }, { "condition": "iNA", "time": 2, "replicate": "a", "Acronym": "NA", "Feeding": "Ad libitum", "Diet": "NCD", "ZT": 17, "tissue": "ileum", "TPM": 6.249058 }, { "condition": "iNA", "time": 2, "replicate": "b", "Acronym": "NA", "Feeding": "Ad libitum", "Diet": "NCD", "ZT": 17, "tissue": "ileum", "TPM": 9.583641000000002 }, { "condition": "iNA", "time": 2, "replicate": "c", "Acronym": "NA", "Feeding": "Ad libitum", "Diet": "NCD", "ZT": 17, "tissue": "ileum", "TPM": 9.09873 }, { "condition": "iNA", "time": 3, "replicate": "a", "Acronym": "NA", "Feeding": "Ad libitum", "Diet": "NCD", "ZT": 21, "tissue": "ileum", "TPM": 11.4573 }, { "condition": "iNA", "time": 3, "replicate": "b", "Acronym": "NA", "Feeding": "Ad libitum", "Diet": "NCD", "ZT": 21, "tissue": "ileum", "TPM": 14.6184 }, { "condition": "iNA", "time": 3, "replicate": "c", "Acronym": "NA", "Feeding": "Ad libitum", "Diet": "NCD", "ZT": 21, "tissue": "ileum", "TPM": 13.388 }, { "condition": "iNA", "time": 4, "replicate": "a", "Acronym": "NA", "Feeding": "Ad libitum", "Diet": "NCD", "ZT": 1, "tissue": "ileum", "TPM": 9.357569 }, { "condition": "iNA", "time": 4, "replicate": "b", "Acronym": "NA", "Feeding": "Ad libitum", "Diet": "NCD", "ZT": 1, "tissue": "ileum", "TPM": 9.29658 }, { "condition": "iNA", "time": 4, "replicate": "c", "Acronym": "NA", "Feeding": "Ad libitum", "Diet": "NCD", "ZT": 1, "tissue": "ileum", "TPM": 9.731653 }, { "condition": "iNA", "time": 5, "replicate": "a", "Acronym": "NA", "Feeding": "Ad libitum", "Diet": "NCD", "ZT": 5, "tissue": "ileum", "TPM": 5.993137 }, { "condition": "iNA", "time": 5, "replicate": "b", "Acronym": "NA", "Feeding": "Ad libitum", "Diet": "NCD", "ZT": 5, "tissue": "ileum", "TPM": 8.257342000000001 }, { "condition": "iNA", "time": 5, "replicate": "c", "Acronym": "NA", "Feeding": "Ad libitum", "Diet": "NCD", "ZT": 5, "tissue": "ileum", "TPM": 8.7060736 }, { "condition": "iNA", "time": 6, "replicate": "a", "Acronym": "NA", "Feeding": "Ad libitum", "Diet": "NCD", "ZT": 9, "tissue": "ileum", "TPM": 6.4272839999999976 }, { "condition": "iNA", "time": 6, "replicate": "b", "Acronym": "NA", "Feeding": "Ad libitum", "Diet": "NCD", "ZT": 9, "tissue": "ileum", "TPM": 6.99325 }, { "condition": "iNA", "time": 6, "replicate": "c", "Acronym": "NA", "Feeding": "Ad libitum", "Diet": "NCD", "ZT": 9, "tissue": "ileum", "TPM": 6.4778769999999986 }, { "condition": "iNC", "time": 13, "replicate": "b", "Acronym": "CDKO", "Feeding": "Ad libitum", "Diet": "NCD", "ZT": 13, "tissue": "ileum", "TPM": 11.772621 }, { "condition": "iNC", "time": 17, "replicate": "b", "Acronym": "CDKO", "Feeding": "Ad libitum", "Diet": "NCD", "ZT": 17, "tissue": "ileum", "TPM": 10.362 }, { "condition": "iNC", "time": 1, "replicate": "b", "Acronym": "CDKO", "Feeding": "Ad libitum", "Diet": "NCD", "ZT": 1, "tissue": "ileum", "TPM": 15.022912 }, { "condition": "iNC", "time": 21, "replicate": "b", "Acronym": "CDKO", "Feeding": "Ad libitum", "Diet": "NCD", "ZT": 21, "tissue": "ileum", "TPM": 8.62466 }, { "condition": "iNC", "time": 5, "replicate": "b", "Acronym": "CDKO", "Feeding": "Ad libitum", "Diet": "NCD", "ZT": 5, "tissue": "ileum", "TPM": 9.01677 }, { "condition": "iNC", "time": 9, "replicate": "b", "Acronym": "CDKO", "Feeding": "Ad libitum", "Diet": "NCD", "ZT": 9, "tissue": "ileum", "TPM": 10.178882000000002 }] } };
-        var embedOpt = { "mode": "vega-lite" };
-
-        function showError(el, error) {
-          el.innerHTML = ('<div class="error" style="color:red;">'
-            + '<p>JavaScript Error: ' + error.message + '</p>'
-            + "<p>This usually means there's a typo in your chart specification. "
-            + "See the javascript console for the full traceback.</p>"
-            + '</div>');
-          throw error;
-        }
-        const el = document.getElementById('vis');
-        vegaEmbed("#vis", spec, embedOpt)
-          .catch(error => showError(el, error));
-      })(vegaEmbed);
-
-  </script> -->
   </main>
 </body>
 
